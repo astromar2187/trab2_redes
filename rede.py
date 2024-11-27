@@ -1,15 +1,16 @@
 import socket
 import random
 import time
+import json 
 
 # ISSO AQUI É A MÁQUINA B
 # A MÁQUINA B É A INTERMEDIÁRIA, ela deve ser capaz de receber pacotes do remetente e repassar para o destinatário e vice-versa.
 # Alternativamente, ela deve poder interferir na comunicação, podendo simular a perda, corrupção ou atraso de pacotes
 
-LISTEN_IP = '127.0.0.1'  # Máquina B escuta pacotes do remetente
+LISTEN_IP = '127.0.0.1'  # Máquina B escuta pacotes do remetente (maquina A)
 LISTEN_PORT = 8080       # Porta da máquina B para escutar
 DEST_IP = '127.0.0.1'    # Máquina C (destinatário)
-DEST_PORT = 9090         # Porta da máquina C
+DEST_PORT = 9090         # Porta da máquina C (destinatario)
 
 def modo_automatico():
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock_in:
@@ -23,7 +24,7 @@ def modo_automatico():
                 print(f"Máquina B recebeu: {pacote.decode()}")
 
                 # Simular intervenções (perda ou atraso)
-                if random.random() < 0.1:  # 10% chance de perder o pacote
+                if random.random() < 0.95:  # 10% chance de perder o pacote
                     print("Máquina B: pacote perdido!")
                     continue
                 if random.random() < 0.2:  # 20% chance de atrasar o pacote
