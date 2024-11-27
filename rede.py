@@ -24,7 +24,7 @@ def modo_automatico():
                 print(f"Máquina B recebeu: {pacote.decode()}")
 
                 # Simular intervenções (perda ou atraso)
-                if random.random() < 0.95:  # 10% chance de perder o pacote
+                if random.random() < 0.1:  # 10% chance de perder o pacote
                     print("Máquina B: pacote perdido!")
                     continue
                 if random.random() < 0.2:  # 20% chance de atrasar o pacote
