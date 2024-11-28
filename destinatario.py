@@ -23,25 +23,29 @@ def destinatario():
 
             checksum_calculado = calculate_checksum(f"{expected_seq_num}:{mensagem}")
 
-
+            # Verifica se o checksum está correto
             if valor_checksum == checksum_calculado:
-                print(f"teste de checksum \nMensagem: '{mensagem}' com checksum {checksum_calculado}")
-                print('integridade do pacote conferida com sucesso por meio do checksum! o pacote foi corretamente recebido!')
+                print(f"Checksum correto! Mensagem: '{mensagem}' com checksum {checksum_calculado}")
             else:
-                print(f"teste de checksum \nMensagem: '{mensagem}' com checksum {checksum_calculado}")
-                print("erro na integridade do pacote! checksum inesperado!")
-           
+                print(f"Erro no checksum! Mensagem: '{mensagem}' com checksum {checksum_calculado}")
 
+            # Verifica se o número de sequência está correto
             if seq_num == expected_seq_num:
-                print(f"teste de sequencia: Mensagem: '{mensagem}' com SEQ {seq_num}")
-                print('numero de sequencia correto! mensagem corretamente recebida!')
+                print(f"Mensagem recebida com SEQ {seq_num}: '{mensagem}'")
                 # Envia ACK
-                sock.sendto(str(seq_num).encode(), endereco)
-                print(f"ACK {seq_num} enviado!")
+                res = {'sequencia': seq_num, 'atraso': False}
+                res = json.dumps(res)
+                sock.sendto(res.encode(), endereco)
+                print(f"ACK {seq_num} enviado para {endereco}")
                 expected_seq_num += 1  # Atualiza número de sequência esperado
-            else:
-                print("Número de sequência inesperado, ignorando mensagem.")
-
+            elif seq_num < expected_seq_num:
+                print(f"Recebido pacote duplicado com SEQ {seq_num}, descartando...")
+                # Envia ACK
+                res = {'sequencia': seq_num, 'atraso': False}
+                res = json.dumps(res)
+                sock.sendto(res.encode(), endereco)
+                print(f"ACK {seq_num} enviado para {endereco}")
+                
 
 def calculate_checksum(data):
     return sum(data.encode()) % 256
