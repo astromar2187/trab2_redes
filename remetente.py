@@ -6,7 +6,9 @@ import json
 # A MÁQUINA C É O REMETENTE, ela deve ser capaz de enviar pacotes para a máquina B e aguardar o ACK
 
 SERVER_IP = '127.0.0.1'  # IP da máquina intermediária
-SERVER_PORT = 8080       # Porta da máquina intermediária
+SERVER_PORT = 7070       # Porta da máquina intermediária
+REMETENTE_IP = '127.0.0.1' # Máquina A (remetente)
+REMETENTE_PORT = 8080      # Porta da máquina A (remetente)
 TIMEOUT = 2             # Tempo limite para ACK (segundos)
 
 def remetente():
@@ -22,9 +24,10 @@ def remetente():
             pacote = json.dumps({'sequencia': seq_num, 'mensagem': mensagem, 'checksum': checksum})
             sock.sendto(pacote.encode(), (SERVER_IP, SERVER_PORT))  # Envia o pacote como bytes
             print(f"Enviado: {pacote}")
+            time.sleep(2)
 
             # Aguarda ACK
-            resposta, _ = sock.recvfrom(1024)
+            '''resposta, _ = sock.recvfrom(1024)
             resposta = json.loads(resposta.decode())  # Decodifica a resposta recebida
             if resposta.get('atraso'):
                 print("ACK atrasado, reenviando...")
@@ -35,7 +38,7 @@ def remetente():
                 print(f"ACK {ack} recebido com sucesso!")
                 seq_num += 1  # Atualiza o número de sequência para o próximo pacote
                 time.sleep(1)  # Pausa de 1 segundo entre envios (opcional)
-                break
+                break'''
      
 
 def calculate_checksum(data):

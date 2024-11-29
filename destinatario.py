@@ -14,6 +14,13 @@ def destinatario():
         print(f"Destinatário escutando em {LISTEN_IP}:{LISTEN_PORT}...")
 
         while True:
+            pacote, endereco = sock.recvfrom(1024)
+            pacote = json.loads(pacote.decode())  # Decodifica os bytes e converte de volta para dicionário
+            print(f"Destinatário recebeu: {pacote}")
+    
+
+
+        while False:
             # Recebe pacote
             pacote, endereco = sock.recvfrom(1024)
             pacote = json.loads(pacote.decode())  # Decodifica os bytes e converte de volta para dicionário
