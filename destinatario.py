@@ -8,6 +8,7 @@ LISTEN_PORT = 9090
 
 def destinatario():
     expected_seq_num = 0
+    num_seq_anterior = 1
 
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
         sock.bind((LISTEN_IP, LISTEN_PORT))
@@ -17,13 +18,6 @@ def destinatario():
             pacote, endereco = sock.recvfrom(1024)
             pacote = json.loads(pacote.decode())  # Decodifica os bytes e converte de volta para dicionário
             print(f"Destinatário recebeu: {pacote}")
-    
-
-
-        while False:
-            # Recebe pacote
-            pacote, endereco = sock.recvfrom(1024)
-            pacote = json.loads(pacote.decode())  # Decodifica os bytes e converte de volta para dicionário
             seq_num = pacote['sequencia']
             mensagem = pacote['mensagem']
             valor_checksum = pacote['checksum']
@@ -35,23 +29,34 @@ def destinatario():
                 print(f"Checksum correto! Mensagem: '{mensagem}' com checksum {checksum_calculado}")
             else:
                 print(f"Erro no checksum! Mensagem: '{mensagem}' com checksum {checksum_calculado}")
-
+                # nao mandar ack e esperar o remetente reenviar
+                break
+            
             # Verifica se o número de sequência está correto
+
+
+            if seq_num == num_seq_anterior:
+                    print("Erro na sequência de pacotes")
+                    # nao envia ack e espera o remetente reenviar
+                    break  
+
+
             if seq_num == expected_seq_num:
-                print(f"Mensagem recebida com SEQ {seq_num}: '{mensagem}'")
+                print(f"Número de sequência correto! Mensagem: '{mensagem}'")
+
+                # tem uma forma de deixar esses ifs mais simplificados, mas deixei assim pra ter uma visualizacao melhor
+                if expected_seq_num == 0 and num_seq_anterior == 1:
+                    expected_seq_num = 1
+                    num_seq_anterior = 0
+                elif expected_seq_num == 1 and num_seq_anterior == 0:
+                    expected_seq_num = 0
+                    num_seq_anterior = 1
                 # Envia ACK
                 res = {'sequencia': seq_num, 'atraso': False}
-                res = json.dumps(res)
-                sock.sendto(res.encode(), endereco)
-                print(f"ACK {seq_num} enviado para {endereco}")
-                expected_seq_num += 1  # Atualiza número de sequência esperado
-            elif seq_num < expected_seq_num:
-                print(f"Recebido pacote duplicado com SEQ {seq_num}, descartando...")
-                # Envia ACK
-                res = {'sequencia': seq_num, 'atraso': False}
-                res = json.dumps(res)
-                sock.sendto(res.encode(), endereco)
-                print(f"ACK {seq_num} enviado para {endereco}")
+                res = json.dumps(res) # Converte o dicionário para string JSON
+                sock.sendto(res.encode(), endereco) # Envia o ACK como bytes
+                print(f"ACK {seq_num} enviado para {endereco}") # Mostra o número de sequência do ACK enviado
+            
                 
 
 def calculate_checksum(data):
