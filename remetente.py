@@ -5,11 +5,25 @@ import json
 # ISSO É MÁQUINA C
 # A MÁQUINA C É O REMETENTE, ela deve ser capaz de enviar pacotes para a máquina B e aguardar o ACK
 
+# Formato de mensagens:
+# Dados: {'isACK': False, 'sequencia': int, 'mensagem': string, 'checksum': int}
+# ACK: {'isACK': True, 'sequencia': int, 'atraso': bool}
+
 SERVER_IP = '127.0.0.1'  # IP da máquina intermediária
 SERVER_PORT = 7070       # Porta da máquina intermediária
 REMETENTE_IP = '127.0.0.1' # Máquina A (remetente)
 REMETENTE_PORT = 8080      # Porta da máquina A (remetente)
-TIMEOUT = 2             # Tempo limite para ACK (segundos)
+#TIMEOUT = 2             # Tempo limite para ACK (segundos)
+
+__timeout = 2
+
+def temporizador(tempo):
+    print("Temporizador iniciado")
+    while tempo > 0:
+        tempo -= 1
+        time.sleep(1)
+    return True
+    
 
 def remetente_aut():
     mensagem = "plutao nao e mais planeta!!"
@@ -24,6 +38,7 @@ def remetente_aut():
             pacote = json.dumps({'sequencia': seq_num, 'mensagem': mensagem, 'checksum': checksum})
             sock.sendto(pacote.encode(), (SERVER_IP, SERVER_PORT))  # Envia o pacote como bytes
             print(f"Enviado: {pacote}")
+            seq_num += 1  # Atualiza o número de sequência para o próximo pacote
             time.sleep(2)
 
             # Aguarda ACK
@@ -47,4 +62,4 @@ def calculate_checksum(data):
     return sum(data.encode()) % 256
 
 if __name__ == "__main__":
-    remetente()
+    remetente_aut()

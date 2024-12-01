@@ -6,6 +6,10 @@ import json
 # ISSO AQUI É A MÁQUINA B
 # A MÁQUINA B É A INTERMEDIÁRIA
 
+# Formato de mensagens:
+# Dados: {'isACK': False, 'sequencia': int, 'mensagem': string, 'checksum': int}
+# ACK: {'isACK': True, 'sequencia': int}
+
 # constantes 
 RED = '\033[91m'
 GREEN = '\033[92m'
@@ -36,8 +40,9 @@ def atraso(): # Atrasa o pacote entre 0 e 3 segundos
 def corromper_pacote(pacote): # Corrompe o pacote trocando os bytes por valores aleatórios
     pacote = json.loads(pacote.decode())  # Decodifica os bytes e converte de volta para dicionário
     seq_num = pacote['sequencia']
+    checksum = pacote['checksum']
 
-    pacote_corrompido = json.dumps({'sequencia': seq_num, 'mensagem': "dados corrompidos!", 'checksum': -1})
+    pacote_corrompido = json.dumps({'sequencia': seq_num, 'mensagem': "dados corrompidos!", 'checksum': checksum})
     return pacote_corrompido.encode()
 
 def iniciar_sockets():
@@ -50,6 +55,7 @@ def iniciar_sockets():
 
 def processar_pacote_aut(sock_out, pacote, endereco_origem, endereco_destino): # função que define o que acontecerá com o pacote recebido
     print()
+    
     print(f"REDE recebeu: {pacote.decode()} de {endereco_origem}")
 
     if random.random() < TAXA_PERDA: # Se for perdido, o pacote não é enviado.
@@ -114,26 +120,32 @@ def menu_inicial():
     print("2 - Modo automático")
     print("3 - Sair")
     opcao = input("Opção: ")
+    while opcao not in ['1', '2', '3']:
+        print("Opção inválida! Tente novamente.")
+        opcao = menu_inicial()
     return opcao
 
 def menu_manual():
     print("Selecione uma opção: ")
     print("1 - Enviar pacote")
-    print("2 - Atrasar pacote (Tempo aleatório entre 0 e 3 segundos)")
-    print("3 - Atrasar pacote (Tempo customizado)")
-    print("4 - Corromper pacote")
-    print("5 - Sair")
+    print("2 - Descartar pacote")
+    print("3 - Corromper pacote")
+    print("4 - Atrasar pacote (Tempo aleatório entre 0 e 3 segundos)")
+    print("5 - Atrasar pacote (Tempo customizado)")
+    print("6 - Sair")
     opcao = input("Opção: ")
-    while opcao not in ['1', '2', '3', '4', '5']:
+    while opcao not in ['1', '2', '3', '4', '5', '6']:
         print("Opção inválida! Tente novamente.")
-        opcao = input("Opção: ")
+        opcao = menu_manual()
     return opcao
 
 def modo_manual():
-    print("Bem vindo ao modo manual!")
-    print("Ao receber um pacote, selecione uma opção para definir o que acontecerá com ele")
-    print("O pacote será enviado (ou não) para o destinatário após a escolha")
-    print("Todos os temporizadores são congelados até uma escolha ser feita")
+    print()
+    print("Modo manual iniciado...")
+    #print("Bem vindo ao modo manual!")
+    #print("Ao receber um pacote, selecione uma opção para definir o que acontecerá com ele")
+    #print("O pacote será enviado (ou não) para o destinatário após a escolha")
+    #print("Todos os temporizadores são congelados até uma escolha ser feita")
 
     sock_in, sock_out = iniciar_sockets()
     while True:
@@ -147,6 +159,10 @@ def modo_manual():
             endereco_destino = (DEST_IP, DEST_PORT)
             enviar_pacote(sock_out, pacote, endereco_destino)
             print(f"REDE enviou: {pacote.decode()} para {endereco_destino}")
+
+        elif opcao == '2': # Descartar pacote
+            print("Pacote descartado!")
+
 
         elif opcao == '2': # Atrasar pacote por tempo aleatório
             endereco_destino = (DEST_IP, DEST_PORT)
@@ -169,26 +185,34 @@ def modo_manual():
             enviar_pacote(sock_out, pacote_corrompido, endereco_destino)
             print(f"REDE enviou: {pacote_corrompido.decode()} para {endereco_destino}")
 
-        elif opcao == '5':
+        elif opcao == '6': # Sair
             print("Encerrando conexão...")
             fechar_sockets(sock_in, sock_out)
             print("Fim do programa.")
             break
-    
+
+def receber_pacote(sock_in):
+    pacote, endereco_origem = sock_in.recvfrom(1024)
+
+    if endereco_origem[0] == REMETENTE_IP and endereco_origem[1] == REMETENTE_PORT:
+        endereco_destino = (DEST_IP, DEST_PORT)
+    else:
+        endereco_destino = (REMETENTE_IP, REMETENTE_PORT)
+
+    return pacote, endereco_origem, endereco_destino
 
 def modo_automatico():
+    print("Modo automático iniciado...")
     sock_in, sock_out = iniciar_sockets()
-    for i in range(30):
-        pacote, endereco_origem = sock_in.recvfrom(1024)
 
-        if endereco_origem[0] == REMETENTE_IP and endereco_origem[1] == REMETENTE_PORT:
-            endereco_destino = (DEST_IP, DEST_PORT)
-        else:
-            endereco_destino = (REMETENTE_IP, REMETENTE_PORT)
-
+    for _ in range(10):
+        pacote, endereco_origem, endereco_destino = receber_pacote(sock_in)
         processar_pacote_aut(sock_out, pacote, endereco_origem, endereco_destino)
 
     fechar_sockets(sock_in, sock_out)
+    relatorio_final()
+
+def relatorio_final():
     print()
     print("---------- RELATÓRIO FINAL ----------")
     print(f"Total de pacotes recebidos: {__pkt_perdidos + __pkt_corrompidos + __pkt_atrasados + __pkt_normal}")
@@ -197,50 +221,16 @@ def modo_automatico():
     print(f"Pacotes " + BLUE + "atrasados" + RESET + f": {__pkt_atrasados}")
     print(f"Pacotes " + GREEN + "enviados normalmente" + RESET + f": {__pkt_normal}")
 
-    '''with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock_in:
-        sock_in.bind((LISTEN_IP, LISTEN_PORT))
-        print(f"Máquina B escutando em {LISTEN_IP}:{LISTEN_PORT}...")
+    print("---------------------- FIM ----------------------")
 
-        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock_out:
-            while True:
-                # Recebe pacote do remetente (Máquina C)
-                pacote, endereco_remetente = sock_in.recvfrom(1024)
-                print(f"Máquina B recebeu: {pacote.decode()}")
-
-                # por algum motivo isso aqui buga quando eu tento fazer um loop infinito
-                # ou seja, quando o atraso do pacote é random.random() < 1
-                # ajeitar isso com mt reza veio
-                # if random.random() < 0.1:  # 10% chance de perder o pacote
-                #    print("Máquina B: pacote perdido!")
-                #   continue
-                    
-
-                tempo_inicial = time.time()
-                # Repassa pacote para o destinatário (Máquina A)
-                sock_out.sendto(pacote, (DEST_IP, DEST_PORT))
-                print(f"Máquina B enviou para {DEST_IP}:{DEST_PORT}")
-
-                # Recebe ACK do destinatário
-                resposta, endereco_destinatario = sock_out.recvfrom(1024)
-                print(f"Máquina B recebeu ACK: {resposta.decode()} de {endereco_destinatario}")
-
-                # Simula um atraso de 20% de chance de atrasar o pacote
-                if random.random() < 1:
-                    print("Máquina B: atraso no envio do ACK...")
-                    time.sleep(2)
-
-                # Marcar se houve atraso
-                tempo_final = time.time()
-                resposta = json.loads(resposta.decode())
-                if tempo_final - tempo_inicial >= 2:
-                    resposta['atraso'] = True
-                else:
-                    resposta['atraso'] = False
-
-                # Repassa o ACK para o remetente (Máquina C)
-                resposta = json.dumps(resposta)
-                sock_in.sendto(resposta.encode(), endereco_remetente)
-                print(f"Máquina B repassou ACK para {endereco_remetente}")'''
 
 if __name__ == "__main__":
-    modo_manual()
+    opcao = menu_inicial()
+    if opcao == '1':
+        modo_manual()
+    elif opcao == '2':
+        print("Modo automático iniciado...")
+        modo_automatico()
+    elif opcao == '3':
+        print("Fim do programa.")
+        exit()
