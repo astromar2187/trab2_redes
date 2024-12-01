@@ -23,14 +23,17 @@ REMETENTE_PORT = 8080      # Porta da máquina A (remetente)
 DEST_IP = '127.0.0.1'    # Máquina C (destinatário)
 DEST_PORT = 9090         # Porta da máquina C (destinatário)
 TAXA_PERDA = 0.1         # Taxa de perda de pacotes. Perda significa decarte, não retransmissão, desconexão, etc. Significa que o pacote não será enviado.
-TAXA_ERRO = 0.2          # Taxa de erro de checksum. Erro de checksum significa que o pacote terá seus dados corrompidos, mas será enviado mesmo assim.
-TAXA_ATRASO = 0.2        # Taxa de atraso de pacotes. Atraso significa que o pacote será enviado, mas com um atraso. O atraso é aleatório entre 0 e 2 segundos.
+TAXA_ERRO = 0.1          # Taxa de erro de checksum. Erro de checksum significa que o pacote terá seus dados corrompidos, mas será enviado mesmo assim.
+TAXA_ATRASO = 0.1        # Taxa de atraso de pacotes. Atraso significa que o pacote será enviado, mas com um atraso. O atraso é aleatório entre 0 e 2 segundos.
 
 # global
 pkt_perdidos = 0
 pkt_corrompidos = 0
 pkt_atrasados = 0
 pkt_normal = 0
+
+def print_porc_bar(porc, cor):
+    print(f"{cor}{'|'*int(porc*100)}{RESET}{'|'*int((1-porc)*100)}  {cor}{porc*100:.2f}%{RESET}")
 
 def incrementar_contador(contador):
     if contador == 'pkt_perdidos':
@@ -57,7 +60,7 @@ def atraso(): # Atrasa o pacote entre 0 e 3 segundos
 def corromper_pacote(pacote): # Corrompe o pacote trocando os bytes por valores aleatórios
     pacote = json.loads(pacote.decode())  # Decodifica os bytes e converte de volta para dicionário
     seq_num = pacote['sequencia']
-    is_ack = pacote['isACK']
+    is_ack = pacote["isACK"]
 
     if is_ack:
         pacote_corrompido = json.dumps({'sequencia': -seq_num, 'isACK': is_ack})
@@ -232,11 +235,18 @@ def modo_automatico():
 def relatorio_final():
     print()
     print("---------- RELATÓRIO FINAL ----------")
-    print(f"Total de pacotes recebidos: {pkt_perdidos + pkt_corrompidos + pkt_atrasados + pkt_normal}")
-    print(f"Pacotes " + RED + "perdidos" + RESET + f": {pkt_perdidos}")
-    print(f"Pacotes " + BLUE + "corrompidos" + RESET + f": {pkt_corrompidos}")
-    print(f"Pacotes " + BLUE + "atrasados" + RESET + f": {pkt_atrasados}")
-    print(f"Pacotes " + GREEN + "enviados normalmente" + RESET + f": {pkt_normal}")
+    totalpkg = pkt_perdidos + pkt_corrompidos + pkt_atrasados + pkt_normal
+    print(f"Total de pacotes recebidos: {totalpkg}")
+
+    print(f"Pacotes {RED}perdidos{RESET}: {pkt_perdidos}")
+    print_porc_bar(pkt_perdidos/totalpkg, RED)
+    print(f"Pacotes {BLUE}corrompidos{RESET}: {pkt_corrompidos}")
+    print_porc_bar(pkt_corrompidos/totalpkg, BLUE)
+    print(f"Pacotes {BLUE}atrasados{RESET}: {pkt_atrasados}")
+    print_porc_bar(pkt_atrasados/totalpkg, BLUE)
+    print(f"Pacotes {GREEN}enviados normalmente{RESET}: {pkt_normal}")
+    print_porc_bar(pkt_normal/totalpkg, GREEN)
+
     print("---------------------- FIM ----------------------")
 
 
