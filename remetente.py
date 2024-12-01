@@ -16,6 +16,8 @@ REMETENTE_PORT = 8080      # Porta da máquina A (remetente)
 #TIMEOUT = 2             # Tempo limite para ACK (segundos)
 
 __timeout = 2
+__totalpkg = 30
+mensagem_final = json.dumps({'sequencia': -1, 'mensagem': "FIM", 'checksum': calculate_checksum("-1:FIM")})
 
 def temporizador(tempo):
     print("Temporizador iniciado")
@@ -32,14 +34,14 @@ def remetente_aut():
 
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
     
-
-        while True:
+        
+        for i in range(__totalpkg):
             # Envia mensagem com número de sequência
             pacote = json.dumps({'sequencia': seq_num, 'mensagem': mensagem, 'checksum': checksum})
             sock.sendto(pacote.encode(), (SERVER_IP, SERVER_PORT))  # Envia o pacote como bytes
             print(f"Enviado: {pacote}")
             seq_num += 1  # Atualiza o número de sequência para o próximo pacote
-            time.sleep(2)
+            #time.sleep(2)
 
             # Aguarda ACK
             '''resposta, _ = sock.recvfrom(1024)
@@ -55,6 +57,8 @@ def remetente_aut():
                 time.sleep(1)  # Pausa de 1 segundo entre envios (opcional)
                 break'''
 
+        sock.sendto(mensagem_final.encode(), (SERVER_IP, SERVER_PORT))
+
 def remetente_manual(): 
     pass
 
@@ -63,3 +67,5 @@ def calculate_checksum(data):
 
 if __name__ == "__main__":
     remetente_aut()
+
+    

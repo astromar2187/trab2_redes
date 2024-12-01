@@ -27,10 +27,27 @@ TAXA_ERRO = 0.2          # Taxa de erro de checksum. Erro de checksum significa 
 TAXA_ATRASO = 0.2        # Taxa de atraso de pacotes. Atraso significa que o pacote será enviado, mas com um atraso. O atraso é aleatório entre 0 e 2 segundos.
 
 # global
-__pkt_perdidos = 0
-__pkt_corrompidos = 0
-__pkt_atrasados = 0
-__pkt_normal = 0
+pkt_perdidos = 0
+pkt_corrompidos = 0
+pkt_atrasados = 0
+pkt_normal = 0
+
+def incrementar_contador(contador):
+    if contador == 'pkt_perdidos':
+        global pkt_perdidos
+        pkt_perdidos += 1
+
+    elif contador == 'pkt_corrompidos':
+        global pkt_corrompidos
+        pkt_corrompidos += 1
+
+    elif contador == 'pkt_atrasados':
+        global pkt_atrasados
+        pkt_atrasados += 1
+
+    elif contador == 'pkt_normal':
+        global pkt_normal
+        pkt_normal += 1
 
 def atraso(): # Atrasa o pacote entre 0 e 3 segundos
     tempo_atraso = random.uniform(0, 3)
@@ -55,15 +72,12 @@ def iniciar_sockets():
 
 def processar_pacote_aut(sock_out, pacote, endereco_origem, endereco_destino): # função que define o que acontecerá com o pacote recebido
     print()
-    
     print(f"REDE recebeu: {pacote.decode()} de {endereco_origem}")
 
     if random.random() < TAXA_PERDA: # Se for perdido, o pacote não é enviado.
         print(RED, "REDE: pacote perdido!", RESET)
-
-        # contagem
-        global __pkt_perdidos
-        __pkt_perdidos += 1
+        
+        incrementar_contador('pkt_perdidos')
         return
 
     elif random.random() < TAXA_ERRO:  #Se for corrompido, o pacote é enviado mesmo assim.
@@ -74,9 +88,7 @@ def processar_pacote_aut(sock_out, pacote, endereco_origem, endereco_destino): #
         enviar_pacote(sock_out, pacote_corrompido, endereco_destino)
         print(BLUE, "REDE: pacote corrompido enviado!", RESET)
 
-        # contagem
-        global __pkt_corrompidos
-        __pkt_corrompidos += 1
+        incrementar_contador('pkt_corrompidos')
         return
 
     elif random.random() < TAXA_ATRASO: # Se for atrasado, o pacote é enviado com atraso.
@@ -85,9 +97,7 @@ def processar_pacote_aut(sock_out, pacote, endereco_origem, endereco_destino): #
         enviar_pacote(sock_out, pacote, endereco_destino)
         print(BLUE, "REDE: pacote enviado com atraso!", RESET)
 
-        # contagem
-        global __pkt_atrasados
-        __pkt_atrasados += 1
+        incrementar_contador('pkt_atrasados')
         return
 
     else:
@@ -95,19 +105,15 @@ def processar_pacote_aut(sock_out, pacote, endereco_origem, endereco_destino): #
         enviar_pacote(sock_out, pacote, endereco_destino)
         print(GREEN, "REDE: pacote enviado normalmente!", RESET)
 
-        # contagem
-        global __pkt_normal
-        __pkt_normal += 1
+        incrementar_contador('pkt_normal')
         return
 
 
     #tempo_inicial = time.time()
 
-
 def enviar_pacote(sock_out, pacote, endereco_destino):
     sock_out.sendto(pacote, endereco_destino)
     print(f"REDE enviou: {pacote.decode('latin1')} para {endereco_destino}")
-
 
 def fechar_sockets(sock_in, sock_out):
     sock_in.close()
@@ -202,10 +208,11 @@ def receber_pacote(sock_in):
     return pacote, endereco_origem, endereco_destino
 
 def modo_automatico():
+    print()
     print("Modo automático iniciado...")
     sock_in, sock_out = iniciar_sockets()
 
-    for _ in range(10):
+    while True:
         pacote, endereco_origem, endereco_destino = receber_pacote(sock_in)
         processar_pacote_aut(sock_out, pacote, endereco_origem, endereco_destino)
 
@@ -215,21 +222,21 @@ def modo_automatico():
 def relatorio_final():
     print()
     print("---------- RELATÓRIO FINAL ----------")
-    print(f"Total de pacotes recebidos: {__pkt_perdidos + __pkt_corrompidos + __pkt_atrasados + __pkt_normal}")
-    print(f"Pacotes " + RED + "perdidos" + RESET + f": {__pkt_perdidos}")
-    print(f"Pacotes " + BLUE + "corrompidos" + RESET + f": {__pkt_corrompidos}")
-    print(f"Pacotes " + BLUE + "atrasados" + RESET + f": {__pkt_atrasados}")
-    print(f"Pacotes " + GREEN + "enviados normalmente" + RESET + f": {__pkt_normal}")
-
+    print(f"Total de pacotes recebidos: {pkt_perdidos + pkt_corrompidos + pkt_atrasados + pkt_normal}")
+    print(f"Pacotes " + RED + "perdidos" + RESET + f": {pkt_perdidos}")
+    print(f"Pacotes " + BLUE + "corrompidos" + RESET + f": {pkt_corrompidos}")
+    print(f"Pacotes " + BLUE + "atrasados" + RESET + f": {pkt_atrasados}")
+    print(f"Pacotes " + GREEN + "enviados normalmente" + RESET + f": {pkt_normal}")
     print("---------------------- FIM ----------------------")
 
 
 if __name__ == "__main__":
+    print("Bem vindo ao programa de simulação de rede!")
+
     opcao = menu_inicial()
     if opcao == '1':
         modo_manual()
     elif opcao == '2':
-        print("Modo automático iniciado...")
         modo_automatico()
     elif opcao == '3':
         print("Fim do programa.")
