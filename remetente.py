@@ -38,9 +38,16 @@ def remetente_aut():
         for i in range(__totalpkg):
             # Envia mensagem com número de sequência
             pacote = json.dumps({'sequencia': seq_num, 'mensagem': mensagem, 'checksum': checksum})
+
+            # alterna o numero de seq entre 0 a 1
+            if seq_num == 0:
+                seq_num = 1
+            else:
+                seq_num = 0
+
+            
             sock.sendto(pacote.encode(), (SERVER_IP, SERVER_PORT))  # Envia o pacote como bytes
             print(f"Enviado: {pacote}")
-            seq_num += 1  # Atualiza o número de sequência para o próximo pacote
             #time.sleep(2)
 
             # Aguarda ACK
