@@ -57,9 +57,13 @@ def atraso(): # Atrasa o pacote entre 0 e 3 segundos
 def corromper_pacote(pacote): # Corrompe o pacote trocando os bytes por valores aleatórios
     pacote = json.loads(pacote.decode())  # Decodifica os bytes e converte de volta para dicionário
     seq_num = pacote['sequencia']
-    checksum = pacote['checksum']
+    is_ack = pacote['isACK']
 
-    pacote_corrompido = json.dumps({'sequencia': seq_num, 'mensagem': "dados corrompidos!", 'checksum': checksum})
+    if is_ack:
+        pacote_corrompido = json.dumps({'sequencia': -seq_num, 'isACK': is_ack})
+    else:
+        checksum = pacote['checksum']
+        pacote_corrompido = json.dumps({'sequencia': seq_num, 'mensagem': "dados corrompidos!", 'checksum': checksum})
     return pacote_corrompido.encode()
 
 def iniciar_sockets():
@@ -214,7 +218,13 @@ def modo_automatico():
 
     while True:
         pacote, endereco_origem, endereco_destino = receber_pacote(sock_in)
-        processar_pacote_aut(sock_out, pacote, endereco_origem, endereco_destino)
+        pacote_decod = json.loads(pacote.decode())
+        
+        if pacote_decod['sequencia'] == -1:
+            break
+        else:
+            pacote = json.dumps(pacote_decod).encode()
+            processar_pacote_aut(sock_out, pacote, endereco_origem, endereco_destino)
 
     fechar_sockets(sock_in, sock_out)
     relatorio_final()
