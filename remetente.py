@@ -11,7 +11,7 @@ REMETENTE_IP = '127.0.0.1' # Máquina A (remetente)
 REMETENTE_PORT = 8080      # Porta da máquina A (remetente)
 TIMEOUT = 2             # Tempo limite para ACK (segundos)
 
-def remetente():
+def remetente_aut():
     mensagem = "plutao nao e mais planeta!!"
     seq_num = 0
     checksum = calculate_checksum(f"{seq_num}:{mensagem}")
@@ -39,7 +39,9 @@ def remetente():
                 seq_num += 1  # Atualiza o número de sequência para o próximo pacote
                 time.sleep(1)  # Pausa de 1 segundo entre envios (opcional)
                 break'''
-     
+
+def remetente_manual(): 
+    pass
 
 def calculate_checksum(data):
     return sum(data.encode()) % 256

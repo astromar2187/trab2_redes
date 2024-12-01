@@ -19,8 +19,8 @@ REMETENTE_PORT = 8080      # Porta da máquina A (remetente)
 DEST_IP = '127.0.0.1'    # Máquina C (destinatário)
 DEST_PORT = 9090         # Porta da máquina C (destinatário)
 TAXA_PERDA = 0.1         # Taxa de perda de pacotes. Perda significa decarte, não retransmissão, desconexão, etc. Significa que o pacote não será enviado.
-TAXA_ERRO = 0.5          # Taxa de erro de checksum. Erro de checksum significa que o pacote terá seus dados corrompidos, mas será enviado mesmo assim.
-TAXA_ATRASO = 0.5        # Taxa de atraso de pacotes. Atraso significa que o pacote será enviado, mas com um atraso. O atraso é aleatório entre 0 e 2 segundos.
+TAXA_ERRO = 0.2          # Taxa de erro de checksum. Erro de checksum significa que o pacote terá seus dados corrompidos, mas será enviado mesmo assim.
+TAXA_ATRASO = 0.2        # Taxa de atraso de pacotes. Atraso significa que o pacote será enviado, mas com um atraso. O atraso é aleatório entre 0 e 2 segundos.
 
 # global
 __pkt_perdidos = 0
@@ -45,7 +45,7 @@ def iniciar_sockets():
     sock_in.bind((LISTEN_IP, LISTEN_PORT))
     print(f"REDE escutando em {LISTEN_IP}:{LISTEN_PORT}...")
     sock_out = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    print(f"REDE pronta para enviar pacotes...")
+    print(f"REDE pronta para receber e enviar pacotes...")
     return sock_in, sock_out
 
 def processar_pacote_aut(sock_out, pacote, endereco_origem, endereco_destino): # função que define o que acontecerá com o pacote recebido
@@ -108,13 +108,77 @@ def fechar_sockets(sock_in, sock_out):
     sock_out.close()
     print("REDE: conexão encerrada.")
 
+def menu_inicial():
+    print("Selecione o modo de operação:")
+    print("1 - Modo manual")
+    print("2 - Modo automático")
+    print("3 - Sair")
+    opcao = input("Opção: ")
+    return opcao
+
+def menu_manual():
+    print("Selecione uma opção: ")
+    print("1 - Enviar pacote")
+    print("2 - Atrasar pacote (Tempo aleatório entre 0 e 3 segundos)")
+    print("3 - Atrasar pacote (Tempo customizado)")
+    print("4 - Corromper pacote")
+    print("5 - Sair")
+    opcao = input("Opção: ")
+    while opcao not in ['1', '2', '3', '4', '5']:
+        print("Opção inválida! Tente novamente.")
+        opcao = input("Opção: ")
+    return opcao
 
 def modo_manual():
-    pass
+    print("Bem vindo ao modo manual!")
+    print("Ao receber um pacote, selecione uma opção para definir o que acontecerá com ele")
+    print("O pacote será enviado (ou não) para o destinatário após a escolha")
+    print("Todos os temporizadores são congelados até uma escolha ser feita")
+
+    sock_in, sock_out = iniciar_sockets()
+    while True:
+        pacote, endereco_origem = sock_in.recvfrom(1024)
+        print(f"REDE recebeu: {pacote.decode()} de {endereco_origem}")
+        print("Pacote recebido! O que deseja fazer com ele?")
+
+        opcao = menu_manual()
+
+        if opcao == '1': # Enviar pacote normalmente
+            endereco_destino = (DEST_IP, DEST_PORT)
+            enviar_pacote(sock_out, pacote, endereco_destino)
+            print(f"REDE enviou: {pacote.decode()} para {endereco_destino}")
+
+        elif opcao == '2': # Atrasar pacote por tempo aleatório
+            endereco_destino = (DEST_IP, DEST_PORT)
+            print("Atrasando pacote...")
+            atraso()
+            enviar_pacote(sock_out, pacote, endereco_destino)
+            print(f"REDE enviou: {pacote.decode()} para {endereco_destino}")
+
+        elif opcao == '3': # Atrasar pacote por tempo customizado
+            endereco_destino = (DEST_IP, DEST_PORT)
+            tempo_atraso = float(input("Digite o tempo de atraso em segundos: "))
+            print(f"Atrasando pacote por {tempo_atraso} segundos...")
+            time.sleep(tempo_atraso)
+            enviar_pacote(sock_out, pacote, endereco_destino)
+            print(f"REDE enviou: {pacote.decode()} para {endereco_destino}")
+
+        elif opcao == '4': # Corromper pacote
+            endereco_destino = (DEST_IP, DEST_PORT)
+            pacote_corrompido = corromper_pacote(pacote)
+            enviar_pacote(sock_out, pacote_corrompido, endereco_destino)
+            print(f"REDE enviou: {pacote_corrompido.decode()} para {endereco_destino}")
+
+        elif opcao == '5':
+            print("Encerrando conexão...")
+            fechar_sockets(sock_in, sock_out)
+            print("Fim do programa.")
+            break
+    
 
 def modo_automatico():
     sock_in, sock_out = iniciar_sockets()
-    for i in range(20):
+    for i in range(30):
         pacote, endereco_origem = sock_in.recvfrom(1024)
 
         if endereco_origem[0] == REMETENTE_IP and endereco_origem[1] == REMETENTE_PORT:
@@ -179,4 +243,4 @@ def modo_automatico():
                 print(f"Máquina B repassou ACK para {endereco_remetente}")'''
 
 if __name__ == "__main__":
-    modo_automatico()
+    modo_manual()
