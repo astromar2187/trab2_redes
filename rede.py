@@ -15,6 +15,8 @@ RED = '\033[91m'
 GREEN = '\033[92m'
 RESET = '\033[0m'
 BLUE = '\033[94m'
+YELLOW = '\033[93m'
+MAGENTA = '\033[95m'
 
 LISTEN_IP = '127.0.0.1'  # Máquina B escuta pacotes do remetente (máquina A)
 LISTEN_PORT = 7070       # Porta da máquina B para escutar
@@ -23,7 +25,7 @@ REMETENTE_PORT = 8080      # Porta da máquina A (remetente)
 DEST_IP = '127.0.0.1'    # Máquina C (destinatário)
 DEST_PORT = 9090         # Porta da máquina C (destinatário)
 TAXA_PERDA = 0.1         # Taxa de perda de pacotes. Perda significa decarte, não retransmissão, desconexão, etc. Significa que o pacote não será enviado.
-TAXA_ERRO = 0.1          # Taxa de erro de checksum. Erro de checksum significa que o pacote terá seus dados corrompidos, mas será enviado mesmo assim.
+TAXA_ERRO = 0.4          # Taxa de erro de checksum. Erro de checksum significa que o pacote terá seus dados corrompidos, mas será enviado mesmo assim.
 TAXA_ATRASO = 0.1        # Taxa de atraso de pacotes. Atraso significa que o pacote será enviado, mas com um atraso. O atraso é aleatório entre 0 e 2 segundos.
 
 # global
@@ -63,10 +65,13 @@ def corromper_pacote(pacote): # Corrompe o pacote trocando os bytes por valores 
     is_ack = pacote["isACK"]
 
     if is_ack:
-        pacote_corrompido = json.dumps({'sequencia': -seq_num, 'isACK': is_ack})
+        if seq_num == 0:
+            pacote_corrompido = json.dumps({'sequencia': 1, 'isACK': is_ack})
+        else:
+            pacote_corrompido = json.dumps({'sequencia': 0, 'isACK': is_ack})
     else:
         checksum = pacote['checksum']
-        pacote_corrompido = json.dumps({'sequencia': seq_num, 'mensagem': "dados corrompidos!", 'checksum': checksum})
+        pacote_corrompido = json.dumps({'isACK': is_ack, 'sequencia': seq_num, 'mensagem': "dados corrompidos!", 'checksum': checksum})
     return pacote_corrompido.encode()
 
 def iniciar_sockets():
@@ -156,35 +161,35 @@ def modo_manual():
     print()
     print("Modo manual iniciado...")
     #print("Bem vindo ao modo manual!")
-    #print("Ao receber um pacote, selecione uma opção para definir o que acontecerá com ele")
-    #print("O pacote será enviado (ou não) para o destinatário após a escolha")
-    #print("Todos os temporizadores são congelados até uma escolha ser feita")
+    
 
     sock_in, sock_out = iniciar_sockets()
     while True:
         pacote, endereco_origem = sock_in.recvfrom(1024)
         print(f"REDE recebeu: {pacote.decode()} de {endereco_origem}")
         print("Pacote recebido! O que deseja fazer com ele?")
+        print()
 
         opcao = menu_manual()
 
         if opcao == '1': # Enviar pacote normalmente
             endereco_destino = (DEST_IP, DEST_PORT)
             enviar_pacote(sock_out, pacote, endereco_destino)
-            print(f"REDE enviou: {pacote.decode()} para {endereco_destino}")
+            print(GREEN, "REDE: pacote enviado normalmente!", RESET)
+            incrementar_contador('pkt_normal')
 
         elif opcao == '2': # Descartar pacote
-            print("Pacote descartado!")
+            print(RED, "REDE: pacote descartado!", RESET)
+            incrementar_contador('pkt_perdidos')
 
-
-        elif opcao == '2': # Atrasar pacote por tempo aleatório
+        elif opcao == '4': # Atrasar pacote por tempo aleatório
             endereco_destino = (DEST_IP, DEST_PORT)
             print("Atrasando pacote...")
             atraso()
             enviar_pacote(sock_out, pacote, endereco_destino)
-            print(f"REDE enviou: {pacote.decode()} para {endereco_destino}")
+            print(BLUE, "REDE: pacote enviado com atraso!", RESET)
 
-        elif opcao == '3': # Atrasar pacote por tempo customizado
+        elif opcao == '5': # Atrasar pacote por tempo customizado
             endereco_destino = (DEST_IP, DEST_PORT)
             tempo_atraso = float(input("Digite o tempo de atraso em segundos: "))
             print(f"Atrasando pacote por {tempo_atraso} segundos...")
@@ -192,7 +197,7 @@ def modo_manual():
             enviar_pacote(sock_out, pacote, endereco_destino)
             print(f"REDE enviou: {pacote.decode()} para {endereco_destino}")
 
-        elif opcao == '4': # Corromper pacote
+        elif opcao == '3': # Corromper pacote
             endereco_destino = (DEST_IP, DEST_PORT)
             pacote_corrompido = corromper_pacote(pacote)
             enviar_pacote(sock_out, pacote_corrompido, endereco_destino)
@@ -251,8 +256,21 @@ def relatorio_final():
 
 
 if __name__ == "__main__":
-    print("Bem vindo ao programa de simulação de rede!")
-
+    print(YELLOW, "----------------------------------------------", RESET)
+    print(MAGENTA, "BEM-VINDO AO PROGRAMA DE SIMULAÇÃO DE RDT 3.0", RESET)
+    print(YELLOW, "----------------------------------------------", RESET)
+    print("Este programa simula o envio de pacotes entre um remetente e um destinatário, \ncom a presença de uma máquina intermediária controlando envios, perdas, corrupções e atrasos de pacotes.")
+    print("Essa simulação pode ser feita de forma manual ou automática.")
+    print()
+    print(BLUE, "MODO MANUAL", RESET)
+    print("No modo manual, você pode escolher o que fazer com cada pacote recebido. Ao receber um pacote, selecione uma opção \npara definir o que acontecerá com ele. O pacote será enviado (ou não) para o destinatário após a sua escolha e \nnenhum temporizador será iniciado até uma escolha ser feita.")
+    print()
+    print(GREEN, "MODO AUTOMÁTICO", RESET)
+    print("No modo automático, os pacotes são enviados automaticamente entre remetente e destinatário. A máquina intermediária \ncontrola o envio, perdas, corrupções e atrasos de pacotes baseado em probabilidade pré-definidas e que podem ser \nconfiguradas no código-fonte.")
+    print()
+    print("Independente da escolha, ao final da simulação, um relatório será gerado com a quantidade de pacotes enviados, \nperdidos, corrompidos e atrasados.")
+    print()
+    print(f"{YELLOW}Vamos começar!{RESET}")
     opcao = menu_inicial()
     if opcao == '1':
         modo_manual()
