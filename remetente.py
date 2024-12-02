@@ -17,6 +17,7 @@ REMETENTE_PORT = 8080      # Porta da máquina A (remetente)
 
 timeout = 2
 totalpkg = 30
+
 #mensagem_final = json.dumps({'sequencia': -1, 'mensagem': "FIM", 'checksum': calculate_checksum("-1:FIM")})
 
 def temporizador(tempo):
@@ -30,40 +31,26 @@ def calculate_checksum(data):
     return sum(data.encode()) % 256
 
 def remetente_aut():
-    mensagem = "plutao nao e mais planeta!!"
-    seq_num = 0
+    mensagem = "Mensagem automática"
+
     checksum = calculate_checksum(f"{seq_num}:{mensagem}")
 
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
-    
-        
+        sock.bind((REMETENTE_IP, REMETENTE_PORT))  # Garante que está escutando no mesmo endereço
         for i in range(totalpkg):
             # Envia mensagem com número de sequência
-<<<<<<< HEAD
-            #pacote = json.dumps({'sequencia': seq_num, 'mensagem': mensagem, 'checksum': checksum})
-            ack = json.dumps({'isACK': True, 'sequencia': seq_num}) 
-            #sock.sendto(pacote.encode(), (SERVER_IP, SERVER_PORT))  # Envia o pacote como bytes
-            sock.sendto(ack.encode(), (SERVER_IP, SERVER_PORT))
-            #print(f"Enviado: {pacote}")
-            print(f"Enviado: {ack}")
-            seq_num += 1  # Atualiza o número de sequência para o próximo pacote
-=======
             pacote = json.dumps({'sequencia': seq_num, 'mensagem': mensagem, 'checksum': checksum})
-
-            # alterna o numero de seq entre 0 a 1
-            if seq_num == 0:
-                seq_num = 1
-            else:
-                seq_num = 0
-
-            
             sock.sendto(pacote.encode(), (SERVER_IP, SERVER_PORT))  # Envia o pacote como bytes
             print(f"Enviado: {pacote}")
->>>>>>> 58354cf41bd02ab98922294be81d0680897541ec
+
+
+
+            sock.sendto(pacote.encode(), (SERVER_IP, SERVER_PORT))  # Envia o pacote como bytes
+            print(f"Enviado: {pacote}")
             #time.sleep(2)
 
             # Aguarda ACK
-            '''resposta, _ = sock.recvfrom(1024)
+            resposta, _ = sock.recvfrom(1024)
             resposta = json.loads(resposta.decode())  # Decodifica a resposta recebida
             if resposta.get('atraso'):
                 print("ACK atrasado, reenviando...")
@@ -71,21 +58,92 @@ def remetente_aut():
 
             ack = resposta['sequencia']
             if ack == seq_num:
+                
+                # alterna o numero de seq entre 0 a 1
+                if seq_num == 0:
+                    seq_num = 1
+                else:
+                    seq_num = 0
                 print(f"ACK {ack} recebido com sucesso!")
-                seq_num += 1  # Atualiza o número de sequência para o próximo pacote
                 time.sleep(1)  # Pausa de 1 segundo entre envios (opcional)
-                break'''
-
-        mensagem_final = json.dumps({'sequencia': -1, 'mensagem': "FIM", 'checksum': calculate_checksum("-1:FIM")})
-        sock.sendto(mensagem_final.encode(), (SERVER_IP, SERVER_PORT))
-        print(f"Enviado: {mensagem_final}")
+                break
+        #mensagem_final = json.dumps({'sequencia': -1, 'mensagem': "FIM", 'checksum': calculate_checksum("-1:FIM")})
+        #sock.sendto(mensagem_final.encode(), (SERVER_IP, SERVER_PORT))
+        #print(f"Enviado: {mensagem_final}")
 
 def remetente_manual(): 
-    pass
+    mensagem = input("Digite a mensagem a ser enviada: ")
+    seq_num = 0
+    checksum = calculate_checksum(f"{seq_num}:{mensagem}")
+
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+    
+        sock.bind((REMETENTE_IP, REMETENTE_PORT))  # Garante que está escutando no mesmo endereço
+
+        
+        while True:
+            
+                # Envia mensagem com número de sequência
+                pacote = json.dumps({'sequencia': seq_num, 'mensagem': mensagem, 'checksum': checksum})
+                sock.sendto(pacote.encode(), (SERVER_IP, SERVER_PORT))  # Envia o pacote como bytes
+                print(f"Enviado: {pacote}")
+
+
+
+
+
+                # Aguarda ACK
+                resposta, _ = sock.recvfrom(1024)
+                resposta = json.loads(resposta.decode())  # Decodifica a resposta recebida
+
+
+                if resposta['ERROR'] == 'Sucesso':
+                    ack = resposta['sequencia']
+                    if ack == seq_num:
+                        print(f"ACK {ack} recebido com sucesso!")
+                        
+                        # alterna o numero de seq entre 0 a 1
+                        if seq_num == 0:
+                            seq_num = 1
+                        else:
+                            seq_num = 0
+
+                        while True:
+                            print('quer enviar mais uma mensagem? [s/n]')
+                            continuar = input()
+                            if continuar == 's':
+                                mensagem = input("Digite a mensagem a ser enviada: ")
+                                checksum = calculate_checksum(f"{seq_num}:{mensagem}")
+                                break
+                            elif continuar == 'n':
+                                break
+
+                else:
+                    print(f"Erro no ack! {resposta['ERROR']}")
+                    print("Reenviando pacote...")
+                    continue
 
 
 
 if __name__ == "__main__":
-    remetente_aut()
+    while True:
+        print("Digite 0 para sair")
+        print("Digite 1 para enviar uma mensagem manualmente")
+        print("Digite 2 para enviar uma mensagem automaticamente")
+        escolha = int(input())
+        if escolha == 0:
+            break
+        elif escolha == 1:
+            remetente_manual()
+        elif escolha == 2:
+            remetente_aut()
+        else:
+            print("Escolha inválida")
+            continue
+    
+        
+
+   
+
 
     
