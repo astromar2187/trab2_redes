@@ -1,12 +1,29 @@
-import random
+import socket
+import select
+import time
 
-def corromper_pacote(pacote):
-    pacote_corrompido = bytearray(pacote)
-    for i in range(len(pacote_corrompido)):
-        pacote_corrompido[i] = random.randint(0, 255)
-    return bytes(pacote_corrompido)
+SERVER_IP = '127.0.0.1'  # IP da máquina intermediária
+SERVER_PORT = 7070       # Porta da máquina intermediária
+REMETENTE_IP = '127.0.0.1' # Máquina A (remetente)
+REMETENTE_PORT = 8080      # Porta da máquina A (remetente)
+#TIMEOUT = 2             # Tempo limite para ACK (segundos)
 
-msg_original = "plutao nao e mais planeta!!"
-pacote = msg_original.encode()
-pacote_corrompido = corromper_pacote(pacote)
-print(pacote_corrompido.decode('latin1'))
+
+def esperar_pacote(sock_in, timeout):
+    print(f"Esperando pacote por {timeout} segundos...")
+
+    start_time = time.time()
+    ready = select.select([sock], [], [], timeout)
+    
+    if ready[0]:
+        data, addr = sock_in.recvfrom(1024)
+        print(f"Recebido pacote de {addr}: {data.decode()}")
+    else:
+        print("Tempo esgotado sem receber pacotes.")
+    
+    sock.close()
+
+# Exemplo de uso: esperar por um pacote UDP por 10 segundos
+esperar_pacote(10)
+
+    

@@ -32,7 +32,7 @@ def destinatario():
             else:
                 print(f"Erro no checksum! Mensagem: '{mensagem}' com checksum {checksum_calculado}")
                 # nao mandar ack e esperar o remetente reenviar
-                break
+                continue
             
             # Verifica se o número de sequência está correto
             if seq_num == num_seq_anterior:

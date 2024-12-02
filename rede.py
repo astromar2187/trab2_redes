@@ -27,12 +27,14 @@ DEST_PORT = 9090         # Porta da máquina C (destinatário)
 TAXA_PERDA = 0.1         # Taxa de perda de pacotes. Perda significa decarte, não retransmissão, desconexão, etc. Significa que o pacote não será enviado.
 TAXA_ERRO = 0.2          # Taxa de erro de checksum. Erro de checksum significa que o pacote terá seus dados corrompidos, mas será enviado mesmo assim.
 TAXA_ATRASO = 0.2        # Taxa de atraso de pacotes. Atraso significa que o pacote será enviado, mas com um atraso. O atraso é aleatório entre 0 e 2 segundos.
+ATRASO_MAX = 10           # Tempo máximo de atraso de pacotes
 
 # global
 pkt_perdidos = 0
 pkt_corrompidos = 0
 pkt_atrasados = 0
 pkt_normal = 0
+totalpkg = 10
 timeout = 2
 
 def incrementar_contador(contador):
@@ -52,8 +54,8 @@ def incrementar_contador(contador):
         global pkt_normal
         pkt_normal += 1
 
-def atraso(): # Atrasa o pacote entre 0 e 3 segundos
-    tempo_atraso = random.uniform(0, 3)
+def atraso(): # Atrasa o pacote entre 0 e ATRASO_MAX segundos
+    tempo_atraso = random.uniform(0, ATRASO_MAX)
     print(f"{tempo_atraso} segundos")
     time.sleep(tempo_atraso)
     return tempo_atraso
@@ -61,15 +63,15 @@ def atraso(): # Atrasa o pacote entre 0 e 3 segundos
 def corromper_pacote(pacote): # Corrompe o pacote trocando os bytes por valores aleatórios
     pacote = json.loads(pacote.decode())  # Decodifica os bytes e converte de volta para dicionário
     seq_num = pacote['sequencia']
+    is_ack = pacote['isACK'] # Verifica se o pacote é um ACK, toda mensagem tem que ter esse campo
+    checksum = pacote['checksum']
 
-     
-    if pacote.get('isACK'):
-        is_ack = pacote['isACK']
-
-    if pacote.get('isACK') and is_ack:
-        pacote_corrompido = json.dumps({'isACK': is_ack, 'sequencia': -seq_num, 'isACK': is_ack}) # inverte o sinal do número de sequência
+    if is_ack:
+        if seq_num == 0:
+            pacote_corrompido = json.dumps({'isACK': is_ack, 'sequencia': 1, 'checksum': checksum})
+        else:
+            pacote_corrompido = json.dumps({'isACK': is_ack, 'sequencia': 0, 'checksum': checksum})
     else:
-        checksum = pacote['checksum']
         pacote_corrompido = json.dumps({'isACK': is_ack, 'sequencia': seq_num, 'mensagem': "dados corrompidos!", 'checksum': checksum})
     return pacote_corrompido.encode()
 
@@ -89,7 +91,7 @@ def processar_pacote_aut(sock_out, pacote, endereco_origem, endereco_destino): #
         print(RED, "REDE: pacote perdido!", RESET)
         
         incrementar_contador('pkt_perdidos')
-        return
+        return 0
 
     elif random.random() < TAXA_ERRO:  #Se for corrompido, o pacote é enviado mesmo assim.
         # corrupção do pacote
@@ -100,7 +102,7 @@ def processar_pacote_aut(sock_out, pacote, endereco_origem, endereco_destino): #
         print(BLUE, "REDE: pacote corrompido enviado!", RESET)
 
         incrementar_contador('pkt_corrompidos')
-        return
+        return 1
 
     elif random.random() < TAXA_ATRASO: # Se for atrasado, o pacote é enviado com atraso.
         print(RED, "REDE: atraso no envio do pacote. Tempo de atraso: ", RESET, end='')
@@ -109,7 +111,7 @@ def processar_pacote_aut(sock_out, pacote, endereco_origem, endereco_destino): #
         print(BLUE, "REDE: pacote enviado com atraso!", RESET)
 
         incrementar_contador('pkt_atrasados')
-        return
+        return 2
 
     else:
         # Se não for perdido, corrompido ou atrasado, o pacote é enviado normalmente.
@@ -117,7 +119,7 @@ def processar_pacote_aut(sock_out, pacote, endereco_origem, endereco_destino): #
         print(GREEN, "REDE: pacote enviado normalmente!", RESET)
 
         incrementar_contador('pkt_normal')
-        return
+        return 3
 
 
     #tempo_inicial = time.time()
@@ -155,13 +157,14 @@ def menu_manual():
         print("Opção inválida! Tente novamente.")
         opcao = menu_manual()
     return opcao
+
 def modo_manual():
     print("\nModo manual iniciado...")
     tempoizador = True
     sock_in, sock_out = iniciar_sockets()
 
     while True:
-        pacote, endereco_origem = sock_in.recvfrom(1024)
+        pacote, endereco_origem, endereco_destino = receber_pacote(sock_in)
         print(f"REDE recebeu: {pacote.decode()} de {endereco_origem}")
         print("Pacote recebido! O que deseja fazer com ele?")
         print()
@@ -170,18 +173,18 @@ def modo_manual():
 
         if opcao == '1':  # Enviar pacote normalmente
             tempoizador = True  # Marcar como positivo para indicar sucesso
-            endereco_destino = (DEST_IP, DEST_PORT)
             enviar_pacote(sock_out, pacote, endereco_destino)
+            
 
-        elif opcao == '2':  # Descartar pacote
+        elif opcao == '2':  # Descartar pacote, não enviar ack
             tempoizador = True
             print("Pacote descartado!")
-            valor_ack = False  # Marcar como negativo para indicar perda
+            #valor_ack = False  # Marcar como negativo para indicar perda
 
-            seq = random.randint(0, 1)
+            #seq = random.randint(0, 1)
             # Atualizar ACK com o valor atual de valor_ack
-            ack = {'isACK': True, 'sequencia': seq, 'ERROR': 'Pacote descartado!'}
-            ack = json.dumps(ack).encode()
+            #ack = {'isACK': True, 'sequencia': seq, 'ERROR': 'Pacote descartado!'}
+            #ack = json.dumps(ack).encode()
 
             # Enviar ACK de volta ao remetente
             sock_out.sendto(ack, endereco_origem)
@@ -190,16 +193,13 @@ def modo_manual():
             continue  # Voltar ao início do loop sem enviar o pacote pro dest
 
         elif opcao == '3':  # Corromper pacote
-            tempoizador = True
-            endereco_destino = (DEST_IP, DEST_PORT)
-            
+            tempoizador = True       
             pacote_corrompido = corromper_pacote(pacote)
             enviar_pacote(sock_out, pacote_corrompido, endereco_destino)
             print(f"REDE enviou pacote corrompido para {endereco_destino}")
             print('recebendo pacote novamente...')
 
         elif opcao == '4':  # Atrasar pacote por tempo aleatório
-            endereco_destino = (DEST_IP, DEST_PORT)
             tempo_atraso = atraso()
 
             if tempo_atraso > timeout:
@@ -243,13 +243,6 @@ def modo_manual():
         if tempoizador == False:
             print('recebendo pacote novamente...')
             
- 
-
-
-
-
-
-
 
 def receber_pacote(sock_in):
     pacote, endereco_origem = sock_in.recvfrom(1024)
@@ -262,20 +255,37 @@ def receber_pacote(sock_in):
 
     return pacote, endereco_origem, endereco_destino
 
+def calculate_checksum(data):
+    return sum(data.encode()) % 256
+
 def modo_automatico():
     print()
     print("Modo automático iniciado...")
     sock_in, sock_out = iniciar_sockets()
 
-    while True:
+    for i in range(totalpkg):
         pacote, endereco_origem, endereco_destino = receber_pacote(sock_in)
         pacote_decod = json.loads(pacote.decode())
-        
-        if pacote_decod['sequencia'] == -1:
+        seq = pacote_decod['sequencia']
+
+        if pacote_decod['sequencia'] == -1: # Verifica se é o pacote de finalização
             break
         else:
             pacote = json.dumps(pacote_decod).encode()
-            processar_pacote_aut(sock_out, pacote, endereco_origem, endereco_destino)
+            returned = processar_pacote_aut(sock_out, pacote, endereco_origem, endereco_destino)
+
+            if returned == 0: # Se o pacote foi perdido, não envia ack
+                continue
+            elif returned == 1: # Se o pacote foi corrompido, envia ack corrompido
+                if seq == 1:
+                    seq = 0
+                else:
+                    seq = 1
+            elif returned == 2: # Se o pacote foi atrasado, envia atrasado
+                pass
+            res = {'isACK': True, 'sequencia': seq} # Cria o ACK falso
+            res = json.dumps(res).encode()
+            enviar_pacote(sock_out, res, (REMETENTE_IP, REMETENTE_PORT)) # Envia o ACK falso
 
     fechar_sockets(sock_in, sock_out)
     relatorio_final()
