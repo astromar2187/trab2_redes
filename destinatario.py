@@ -15,8 +15,10 @@ def destinatario():
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
         sock.bind((LISTEN_IP, LISTEN_PORT))
         print(f"Destinatário escutando em {LISTEN_IP}:{LISTEN_PORT}...")
-
+        
         while True:
+          
+            
             pacote, endereco = sock.recvfrom(1024)
             pacote = json.loads(pacote.decode())  # Decodifica os bytes e converte de volta para dicionário
             
@@ -53,19 +55,15 @@ def destinatario():
                 ack = json.dumps({'isACK': True, 'sequencia': seq_num, 'ERROR': 'Sucesso'}) 
                 sock.sendto(ack.encode(), (SERVER_IP, SERVER_PORT))
                 print(f"Enviado: {ack}")
+                if not pacote['timeout']:
+                    notduplicado = False
+                    
             else:
                 print(f"Erro no checksum! Mensagem: '{mensagem}' com checksum {checksum_calculado}")
-                # nao mandar ack e esperar o remetente reenviar
-                continue
-            
-            # Verifica se o número de sequência está correto
-            if seq_num == num_seq_anterior:
-                    print("Erro na sequência de pacotes")
-                    # nao envia ack e espera o remetente reenviar
-                    break  
                 ack = json.dumps({'isACK': True, 'sequencia': seq_num, 'ERROR': 'checksum invalido! mensagem corrompida'}) 
                 sock.sendto(ack.encode(), (SERVER_IP, SERVER_PORT))
                 print(f"Enviado: {ack}")
+                   
 
                
 
