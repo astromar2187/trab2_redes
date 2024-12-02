@@ -5,6 +5,8 @@ import json
 
 LISTEN_IP = '127.0.0.1'
 LISTEN_PORT = 9090
+SERVER_IP = '127.0.0.1'  # IP da máquina intermediária
+SERVER_PORT = 7070       # Porta da máquina intermediária
 
 def destinatario():
     expected_seq_num = 0
@@ -33,8 +35,6 @@ def destinatario():
                 break
             
             # Verifica se o número de sequência está correto
-
-
             if seq_num == num_seq_anterior:
                     print("Erro na sequência de pacotes")
                     # nao envia ack e espera o remetente reenviar
@@ -52,10 +52,10 @@ def destinatario():
                     expected_seq_num = 0
                     num_seq_anterior = 1
                 # Envia ACK
-                res = {'sequencia': seq_num, 'atraso': False}
+                res = {'isACK': True, 'sequencia': seq_num}
                 res = json.dumps(res) # Converte o dicionário para string JSON
-                sock.sendto(res.encode(), endereco) # Envia o ACK como bytes
-                print(f"ACK {seq_num} enviado para {endereco}") # Mostra o número de sequência do ACK enviado
+                sock.sendto(res.encode(), (SERVER_IP, SERVER_PORT)) # Envia o ACK como bytes
+                print(f"ACK {seq_num} enviado para {SERVER_IP}:{SERVER_PORT}") # Mostra o número de sequência do ACK enviado
             
                 
 

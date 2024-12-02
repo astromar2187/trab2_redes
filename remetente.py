@@ -31,7 +31,8 @@ def calculate_checksum(data):
     return sum(data.encode()) % 256
 
 def remetente_aut():
-    mensagem = "Mensagem automática"
+    mensagem = "Mensagem automatica"
+    seq_num = 0
 
     checksum = calculate_checksum(f"{seq_num}:{mensagem}")
 
@@ -39,12 +40,7 @@ def remetente_aut():
         sock.bind((REMETENTE_IP, REMETENTE_PORT))  # Garante que está escutando no mesmo endereço
         for i in range(totalpkg):
             # Envia mensagem com número de sequência
-            pacote = json.dumps({'sequencia': seq_num, 'mensagem': mensagem, 'checksum': checksum})
-            sock.sendto(pacote.encode(), (SERVER_IP, SERVER_PORT))  # Envia o pacote como bytes
-            print(f"Enviado: {pacote}")
-
-
-
+            pacote = json.dumps({'isACK': False, 'sequencia': seq_num, 'mensagem': mensagem, 'checksum': checksum})
             sock.sendto(pacote.encode(), (SERVER_IP, SERVER_PORT))  # Envia o pacote como bytes
             print(f"Enviado: {pacote}")
             #time.sleep(2)
