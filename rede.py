@@ -15,8 +15,6 @@ RED = '\033[91m'
 GREEN = '\033[92m'
 RESET = '\033[0m'
 BLUE = '\033[94m'
-YELLOW = '\033[93m'
-MAGENTA = '\033[95m'
 
 LISTEN_IP = '127.0.0.1'  # Máquina B escuta pacotes do remetente (máquina A)
 LISTEN_PORT = 7070       # Porta da máquina B para escutar
@@ -160,14 +158,12 @@ def menu_manual():
 
 def modo_manual():
     print("\nModo manual iniciado...")
-    tempoizador = True
     sock_in, sock_out = iniciar_sockets()
-
+    tempoizador = True
     while True:
         pacote, endereco_origem, endereco_destino = receber_pacote(sock_in)
         print(f"REDE recebeu: {pacote.decode()} de {endereco_origem}")
         print("Pacote recebido! O que deseja fazer com ele?")
-        print()
 
         opcao = menu_manual()
 
@@ -181,14 +177,13 @@ def modo_manual():
             print("Pacote descartado!")
             #valor_ack = False  # Marcar como negativo para indicar perda
 
-            #seq = random.randint(0, 1)
-            # Atualizar ACK com o valor atual de valor_ack
-            #ack = {'isACK': True, 'sequencia': seq, 'ERROR': 'Pacote descartado!'}
-            #ack = json.dumps(ack).encode()
+            seq = random.randint(0, 1)
+          
+            aviso = {'isACK': False, 'sequencia': seq, 'ERROR': 'ack atrasado! timeout excedido!'}
+            aviso = json.dumps(aviso).encode() # Converte o dicionário para bytes
 
-            # Enviar ACK de volta ao remetente
-            sock_out.sendto(ack, endereco_origem)
-            print(f"REDE enviou ACK atualizado: {ack.decode()} para {endereco_origem}")
+            # Enviar o aviso de volta ao remetente
+            sock_out.sendto(aviso, endereco_origem)
             print('recebendo pacote novamente...')
             continue  # Voltar ao início do loop sem enviar o pacote pro dest
 
@@ -207,8 +202,11 @@ def modo_manual():
 
             print(f"Atrasando pacote por {tempo_atraso:.2f} segundos...")
             time.sleep(tempo_atraso)
+            pacote = json.loads(pacote.decode()) # Decodifica os bytes e converte de volta para dicionário
+            pacote['timeout'] = tempoizador
+            pacote = json.dumps(pacote).encode()
+
             enviar_pacote(sock_out, pacote, endereco_destino)
-            
 
 
         elif opcao == '5':  # Atrasar pacote por tempo customizado
@@ -220,7 +218,15 @@ def modo_manual():
 
             print(f"Atrasando pacote por {tempo_atraso:.2f} segundos...")
             time.sleep(tempo_atraso)
+
+            pacote = json.loads(pacote.decode()) # Decodifica os bytes e converte de volta para dicionário
+            pacote['timeout'] = tempoizador
+            pacote = json.dumps(pacote).encode() # Converte o dicionário para bytes
+
             enviar_pacote(sock_out, pacote, endereco_destino)
+            
+
+
 
         elif opcao == '6':  # Sair
             print("Encerrando conexão...")
@@ -302,21 +308,8 @@ def relatorio_final():
 
 
 if __name__ == "__main__":
-    print(YELLOW, "----------------------------------------------", RESET)
-    print(MAGENTA, "BEM-VINDO AO PROGRAMA DE SIMULAÇÃO DE RDT 3.0", RESET)
-    print(YELLOW, "----------------------------------------------", RESET)
-    print("Este programa simula o envio de pacotes entre um remetente e um destinatário, \ncom a presença de uma máquina intermediária controlando envios, perdas, corrupções e atrasos de pacotes.")
-    print("Essa simulação pode ser feita de forma manual ou automática.")
-    print()
-    print(BLUE, "MODO MANUAL", RESET)
-    print("No modo manual, você pode escolher o que fazer com cada pacote recebido. Ao receber um pacote, selecione uma opção \npara definir o que acontecerá com ele. O pacote será enviado (ou não) para o destinatário após a sua escolha e \nnenhum temporizador será iniciado até uma escolha ser feita.")
-    print()
-    print(GREEN, "MODO AUTOMÁTICO", RESET)
-    print("No modo automático, os pacotes são enviados automaticamente entre remetente e destinatário. A máquina intermediária \ncontrola o envio, perdas, corrupções e atrasos de pacotes baseado em probabilidade pré-definidas e que podem ser \nconfiguradas no código-fonte.")
-    print()
-    print("Independente da escolha, ao final da simulação, um relatório será gerado com a quantidade de pacotes enviados, \nperdidos, corrompidos e atrasados.")
-    print()
-    print(f"{YELLOW}Vamos começar!{RESET}")
+    print("Bem vindo ao programa de simulação de rede!")
+
     opcao = menu_inicial()
     if opcao == '1':
         modo_manual()

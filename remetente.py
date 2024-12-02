@@ -67,6 +67,16 @@ def remetente_aut():
             # Envia mensagem com número de sequência 0 inicialmente
             pacote = json.dumps({'isACK': False, 'sequencia': seq_num, 'mensagem': mensagem, 'checksum': checksum})
             resposta = enviar_pacote(sock, pacote) # Liga o tempo e aguarda o ACK 0
+            # Envia mensagem com número de sequência
+            pacote = json.dumps({'sequencia': seq_num, 'mensagem': mensagem, 'checksum': checksum})
+            sock.sendto(pacote.encode(), (SERVER_IP, SERVER_PORT))  # Envia o pacote como bytes
+            print(f"Enviado: {pacote}")
+
+
+
+            sock.sendto(pacote.encode(), (SERVER_IP, SERVER_PORT))  # Envia o pacote como bytes
+            print(f"Enviado: {pacote}")
+            #time.sleep(2)
 
             while resposta is None: # Se o tempo esgotar e o ack não chegar, reenvia o pacote
                 print("Erro no ack! Tempo esgotado")
@@ -142,6 +152,18 @@ def remetente_manual():
             if continuar == 's':
                 mensagem = input("Digite a mensagem a ser enviada: ")
                 checksum = calculate_checksum(f"{seq_num}:{mensagem}")
+                terminar = False
+            
+                # Envia mensagem com número de sequência
+                pacote = json.dumps({'sequencia': seq_num, 'mensagem': mensagem, 'checksum': checksum, 'timeout': True})
+                sock.sendto(pacote.encode(), (SERVER_IP, SERVER_PORT))  # Envia o pacote como bytes
+                print(f"Enviado: {pacote}")
+
+
+                # Aguarda ACK
+                resposta, _ = sock.recvfrom(1024)
+                resposta = json.loads(resposta.decode())  # Decodifica a resposta recebida
+
 
 '''
                 if resposta['ERROR'] == 'Sucesso':
@@ -163,7 +185,10 @@ def remetente_manual():
                                 checksum = calculate_checksum(f"{seq_num}:{mensagem}")
                                 break
                             elif continuar == 'n':
+                                terminar = True
                                 break
+                        if terminar:
+                            break
 
                 else:
                     print(f"Erro no ack! {resposta['ERROR']}")
